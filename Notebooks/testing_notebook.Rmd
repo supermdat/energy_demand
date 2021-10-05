@@ -1,0 +1,207 @@
+---
+title: "Energy Demand - testing_notebook"
+author: "M Daniel A Turse"
+date: "2021-10-04"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      toc_collapsed: yes
+    toc_depth: 3
+    number_sections: yes
+    theme: lumen
+  word_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+
+# Setup
+
+## Allow for Reproducible Library Setup
+```{r}
+
+renv::snapshot(
+  prompt = FALSE
+)
+
+```
+
+
+## Load the relevant libraries.
+```{r message=FALSE, warning=FALSE}
+
+# general data manipulation
+library(tidyverse)     # data manipulation in general
+library(lubridate)     # time-based data manipulation
+
+
+# viz
+library(GGally)
+library(plotly)
+library(tidytext)
+
+
+# modeling
+library(tidymodels)     # building models
+library(modeltime)
+library(modeltime.resample)
+library(modeltime.ensemble)
+library(mlflow)         # model tracking
+library(DALEXtra)       # model analyses
+library(vip)            # model analyses
+# library(themis)         # smote sampling
+
+
+# other
+library(corrr)          # correlation analyses
+library(janitor)        # data formatting
+library(skimr)          # data inspection
+library(tictoc)         # timing code
+library(doParallel)     # parallelization across cores
+
+```
+
+## Session/Infrastructure Info
+```{r}
+
+sessionInfo()
+
+```
+
+
+```{r}
+
+installed_packages <-
+  tibble::as_tibble(installed.packages()) %>% 
+  dplyr::select(
+    Package,
+    Version,
+    LibPath
+  ) %>% 
+  dplyr::arrange(
+    LibPath,
+    Package
+  )
+
+installed_packages
+
+
+rm(installed_packages)
+
+```
+
+## Options to Make Visuals Prettier
+```{r}
+
+# set the plotting theme to `theme_minimal`
+ggplot2::theme_set(ggplot2::theme_minimal())
+
+# set print options
+options(max.print = 100000)   # set the number of lines to print
+options(scipen = 999)         # digits longer than this will be converted to scientific notation
+
+```
+
+## Other Setup Optinos
+
+Get the location of the working directory.
+```{r}
+
+wd <- here::here()
+wd
+
+```
+
+Setup to allow for parallel processing across all cores.
+```{r}
+
+# reserving one core if using my laptop, zero if using AWS
+# cores_to_save <-
+#   if (wd == "/Users/mdturse/Dropbox/_AWS/") {
+#     1
+#   } else {
+#     0
+#   }
+# 
+# cores_to_use <- parallel::detectCores(logical = FALSE) - cores_to_save
+# cores_to_use
+# 
+# cl <- parallel::makePSOCKcluster(cores_to_use)
+# doParallel::registerDoParallel(cl)
+
+```
+
+
+# Data Manipulation
+
+## Get the Raw Data
+
+Load in the data.
+
+
+```{r}
+
+url_pre <- "http://api.eia.gov/series/?api_key="
+#api key goes here
+url_mid <- "&series_id="
+url_post <- "EBA.CAL-ALL.D.HL"          # california
+
+```
+
+
+```{r}
+
+data_json <-
+  jsonlite::fromJSON(
+    txt = paste0(url_pre, Sys.getenv("eia_api_key"), url_mid, url_post)
+  )
+
+```
+
+
+```{r}
+
+data_json
+
+```
+
+```{r}
+
+data_meta <- 
+  data_json$series %>% 
+  dplyr::select(
+    -data
+  )
+
+glimpse(data_meta)
+
+```
+
+```{r}
+
+data_raw <- 
+  data_json$series %>% 
+  dplyr::select(
+    data
+  )
+
+glimpse(data_raw)
+
+```
+
+
+```{r}
+
+test <-
+  data_raw$data %>% 
+  tibble::as_tibble(.name_repair = ~ c("A"))
+
+class(test)
+glimpse(test)
+
+```
+
+
+
+

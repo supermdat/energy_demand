@@ -137,54 +137,99 @@ Setup to allow for parallel processing across all cores.
 
 ## Get the Raw Data
 
-Load in the data.
-
-
+### Build Iterations of URL
 ```{r}
 
-url_pre <- "http://api.eia.gov/series/?api_key="
-#api key goes here
-url_mid <- "&series_id="
-url_post <- "EBA.CAL-ALL.D.HL"          # california
+regions <-
+  tibble::tibble(
+    name = c("california", "carolinas", "central", "florida", "mid_atlantic", "midwest",
+             "new_england", "new_york", "northwest", "southeast", "southwest", "tennessee",
+             "texas"
+             ),
+    code = c("EBA.CAL-ALL.D.HL", "EBA.CAR-ALL.D.HL", "EBA.CENT-ALL.D.HL", "EBA.FLA-ALL.D.HL",
+             "EBA.MIDA-ALL.D.HL", "EBA.MIDW-ALL.D.HL", "EBA.NE-ALL.D.HL", "EBA.NY-ALL.D.HL", 
+             "EBA.NW-ALL.D.HL", "EBA.SE-ALL.D.HL", "EBA.SW-ALL.D.HL", "EBA.TEN-ALL.D.HL",
+             "EBA.TEX-ALL.D.HL"
+             )
+  ) %>% 
+  dplyr::mutate(
+    series_id = paste0("&series_id=", code)
+  )
+
+regions
 
 ```
 
+
+### Download Data
 
 ```{r}
 
 data_json <-
-  jsonlite::fromJSON(
-    txt = paste0(url_pre, Sys.getenv("eia_api_key"), url_mid, url_post)
+  purrr::pmap(
+    .l = list(a = regions %>% dplyr::pull(series_id)),
+    .f = function(a) {
+      url_pre <- "http://api.eia.gov/series/?api_key="
+      url_full <- paste0(url_pre, Sys.getenv("eia_api_key"), a)
+      
+      data_json <- jsonlite::fromJSON(txt = url_full)
+      
+      return(data_json)
+    }
   )
 
-```
-
-
-```{r}
-
+names(data_json) <- regions$name
 data_json
 
 ```
 
+
 ```{r}
 
-data_meta <- 
-  data_json$series %>% 
-  dplyr::select(
-    -data
+data_meta <-
+  purrr::pmap_dfr(
+    .l = list(a = data_json),
+    .id = "region",
+    .f = function(a) {
+      
+      data_meta <- a$series %>%
+        dplyr::select(
+          -data
+        )
+      
+      return(data_meta)
+    }
   )
 
-glimpse(data_meta)
+data_meta
 
 ```
 
+
 ```{r}
 
-data_raw <- 
-  data_json$series %>% 
-  dplyr::select(
-    data
+data_raw <-
+  purrr::pmap_dfr(
+    .l = list(a = data_json),
+    .id = "region",
+    .f = function(a) {
+      
+      data_raw <-
+        a$series %>%
+        dplyr::pull(data) %>%
+        tibble::as_tibble(.name_repair = ~ c("temp_col")) %>%
+        dplyr::pull(temp_col) %>%
+        tibble::as_tibble(.name_repair = ~ c("datetime", "demand_MWHrs")) %>%
+        dplyr::mutate(
+          datetime = lubridate::as_datetime(datetime, format = "%Y%m%dT%H-%M"),
+          demand_MWHrs = as.integer(demand_MWHrs)
+        )
+      
+      return(data_raw)
+    }
   )
+
+data_raw$region <- factor(data_raw$region)
 
 glimpse(data_raw)
 
@@ -193,14 +238,18 @@ glimpse(data_raw)
 
 ```{r}
 
-test <-
-  data_raw$data %>% 
-  tibble::as_tibble(.name_repair = ~ c("A"))
-
-class(test)
-glimpse(test)
+skimr::skim(data_raw)
+data_raw %>% dplyr::group_by(region) %>% skimr::skim()
 
 ```
+
+
+```{r}
+
+rm(data_json)
+
+```
+
 
 
 

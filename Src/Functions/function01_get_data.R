@@ -85,11 +85,11 @@ f.get_data <-
     data_raw$region <- factor(data_raw$region)
     
     # return meta and raw
-    tbl <- 
-      tibble::tibble(
+    lst <- 
+      list(
         data_meta = data_meta,
         data_raw = data_raw
       )
     
-    return(tbl)
+    return(lst)
   }

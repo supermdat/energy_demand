@@ -25,16 +25,12 @@ f.get_data <-
       )
     
     # download the data as json files
-    data_json <-
+    data.json <-
       purrr::pmap(
         .l = list(a = regions %>% dplyr::pull(series_id)),
         .f = function(a) {
           url_pre <- "http://api.eia.gov/series/?api_key="
-          url_full <- if(is.null(eia_api_key)) {
-            paste0(url_pre, Sys.getenv("eia_api_key"), a)
-          } else {
-            paste0(url_pre, eia_api_key, a)
-          }
+          url_full <- paste0(url_pre, Sys.getenv("eia_api_key"), a)
           
           data_json <- jsonlite::fromJSON(txt = url_full)
           
@@ -42,12 +38,12 @@ f.get_data <-
         }
       )
     
-    names(data_json) <- regions$name
+    names(data.json) <- regions$name
     
     # pull out the meta data
-    data_meta <-
+    data.meta <-
       purrr::pmap_dfr(
-        .l = list(a = data_json),
+        .l = list(a = data.json),
         .id = "region",
         .f = function(a) {
           
@@ -61,9 +57,9 @@ f.get_data <-
       )
     
     # pull out the time series data
-    data_raw <-
+    data.raw <-
       purrr::pmap_dfr(
-        .l = list(a = data_json),
+        .l = list(a = data.json),
         .id = "region",
         .f = function(a) {
           
@@ -82,13 +78,13 @@ f.get_data <-
         }
       )
     
-    data_raw$region <- factor(data_raw$region)
+    data.raw$region <- factor(data.raw$region)
     
     # return meta and raw
     lst <- 
       list(
-        data_meta = data_meta,
-        data_raw = data_raw
+        data.meta = data.meta,
+        data.raw = data.raw
       )
     
     return(lst)

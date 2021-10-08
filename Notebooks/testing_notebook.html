@@ -255,7 +255,7 @@ div.tocify {
 <pre class="r"><code>renv::snapshot(
   prompt = FALSE
 )</code></pre>
-<pre><code>## * Lockfile written to &#39;~/Dropbox/_AWS/energy_demand/renv.lock&#39;.</code></pre>
+<pre><code>## * The lockfile is already up to date.</code></pre>
 </div>
 <div id="load-the-relevant-libraries." class="section level2" number="1.2">
 <h2 number="1.2"><span class="header-section-number">1.2</span> Load the relevant libraries.</h2>
@@ -1194,6 +1194,7 @@ glimpse(nested_data_tbl)</code></pre>
       .data = nested_data_tbl
     )
   )
+
 
 rec.ml_base &lt;-
   recipes::recipe(

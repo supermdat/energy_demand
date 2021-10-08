@@ -144,10 +144,10 @@
     },
     "TSP": {
       "Package": "TSP",
-      "Version": "1.1-10",
+      "Version": "1.1-11",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "58f127ba1d26ddb0435f9959e814dbea"
+      "Hash": "b72b16750535acbc63e1337d38ff1ace"
     },
     "TTR": {
       "Package": "TTR",

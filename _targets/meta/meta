@@ -1,5 +1,5 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|iteration|parent|children|seconds|warnings|error
-f.get_data|function|e3a43bd031418784||||||||||||||
-f.data_fix_issues|function|ed48ff08a3245480||||||||||||||
 get_data|stem|7de826fed9b7a9cd|8733fc1d1f939a64|1bb7cb54c0acbf39|-689656041||t18908.1520301844s|ab4cfdfdbd1bfc6d|4114176|rds|vector|||34.205||
 data.fix_issues|stem|5b0bd4f1dfc4d4d2|b3735f376405b92c|b35a9723ab592882|2021398536||t18908.1520289029s|2b0d15c999cd992e|4118011|rds|vector|||6.718||
+f.get_data|function|e3a43bd031418784||||||||||||||
+f.data_fix_issues|function|ed48ff08a3245480||||||||||||||

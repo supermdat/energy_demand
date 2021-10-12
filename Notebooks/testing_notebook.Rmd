@@ -235,7 +235,7 @@ glimpse(data.raw)
 
 ```
 
-
+### Fix Data Issues
 ```{r data_fix_issues}
 
 data.fix_issues <-
@@ -243,23 +243,23 @@ data.fix_issues <-
   dplyr::group_by(
     region
   ) %>% 
+  dplyr::arrange(
+    datetime
+  ) %>% 
   dplyr::mutate(
-    datetime = lubridate::floor_date(x = datetime, unit = "hours")
+    datetime = lubridate::floor_date(x = datetime, unit = "hours"),
+    region_row_id = dplyr::row_number()
   ) %>% 
   timetk::pad_by_time(
     .date_var = datetime,
     .by = "hour",
     .pad_value = NA
-  ) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::arrange(
-    region,
-    datetime
-  )
+  ) #%>% 
+  # dplyr::ungroup()
 
 glimpse(data.fix_issues)
 
-rm(data.raw)
+# rm(data.raw)
 
 ```
 
@@ -267,7 +267,7 @@ rm(data.raw)
 ```{r}
 
 skimr::skim(data.fix_issues)
-data.fix_issues %>% dplyr::group_by(region) %>% skimr::skim()
+# data.fix_issues %>% dplyr::group_by(region) %>% skimr::skim()
 
 ```
 
@@ -275,6 +275,38 @@ data.fix_issues %>% dplyr::group_by(region) %>% skimr::skim()
 ```{r}
 
 rm(data.json)
+
+```
+
+
+### Create Global Variables
+```{r}
+
+data.create_global_vars <-
+  data.fix_issues %>% 
+  timetk::tk_augment_fourier(
+    .date_var = datetime,
+    .periods = c(24, 24*7),
+    .K = 2
+  ) %>% 
+  timetk::tk_augment_lags(
+    .value = demand_MWHrs,
+    .lags = c(1, 2, 24, 24*2, 24*7)
+  ) %>% 
+  timetk::tk_augment_slidify(
+    .value = demand_MWHrs,
+    .f = ~base::mean(.x, na.rm = TRUE),
+    .period = c(1, 2, 24, 24*2, 24*7),
+    .partial = FALSE,
+    .align = "right"
+  ) %>% 
+  dplyr::filter(
+    region_row_id >= ((24*7 + 1))
+  )
+
+glimpse(data.create_global_vars)
+
+# rm(data.fix_issues)
 
 ```
 
@@ -292,7 +324,7 @@ forecast_horizon <- 24 * 7 * 28
 ```{r nest}
 
 nested_data_tbl <-
-  data.fix_issues %>% 
+  data.create_global_vars %>% 
   dplyr::group_by(
     region
   ) %>% 
@@ -333,7 +365,50 @@ rec.ml_base <-
     data = modeltime::extract_nested_train_split(
       .data = nested_data_tbl
     )
-  )
+  ) %>% 
+  recipes::update_role(
+    region_row_id,
+    new_role = "id"
+  ) %>% 
+  recipes::step_impute_linear(
+    demand_MWHrs,
+    tidyselect::starts_with("demand_MWHrs_lag"),
+    # impute_with = imp_vars(recipes::all_predictors())
+    impute_with = imp_vars(demand_MWHrs_lag1, demand_MWHrs_lag2, demand_MWHrs_lag24,
+                           demand_MWHrs_lag48, demand_MWHrs_lag168
+                           )
+  ) %>% 
+  timetk::step_timeseries_signature(
+    datetime
+  ) %>% 
+  # recipes::step_center(recipes::all_numeric_predictors()) %>% 
+  # recipes::step_range(recipes::all_numeric_predictors()) %>% 
+  recipes::step_rm(
+    tidyselect::matches("(iso)|(xts)|(minute)|(second)|(hour12)"),
+    datetime_month,
+    datetime_day,
+    datetime_qday,
+    datetime_wday,
+    datetime_yday
+  ) %>% 
+  recipes::step_mutate_at(
+    datetime_year:datetime_mday7,
+    fn = as.character
+  ) %>% 
+  recipes::step_center(recipes::all_numeric_predictors()) %>% 
+  recipes::step_range(recipes::all_numeric_predictors()) %>% 
+  recipes::step_nzv(recipes::all_numeric_predictors())
+
+```
+
+
+```{r}
+
+rec.ml_base %>% 
+  recipes::prep() %>% 
+  recipes::bake(new_data = nested_data_tbl$.actual_data[[1]]) %>% 
+  # dplyr::glimpse()
+  skimr::skim()
 
 ```
 

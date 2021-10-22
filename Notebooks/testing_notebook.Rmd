@@ -354,7 +354,7 @@ rec.time <-
   recipes::recipe(
     demand_MWHrs ~ datetime,
     data = modeltime::extract_nested_train_split(
-      .data = nested_data_tbl
+      object = nested_data_tbl
     )
   )
 
@@ -363,7 +363,7 @@ rec.ml_base <-
   recipes::recipe(
     demand_MWHrs ~ .,
     data = modeltime::extract_nested_train_split(
-      .data = nested_data_tbl
+      object = nested_data_tbl
     )
   ) %>% 
   recipes::update_role(
